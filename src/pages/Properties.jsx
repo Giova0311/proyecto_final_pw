@@ -3,15 +3,15 @@ const router = express.Router();
 const db = require('../config/db'); // Tu conexión a MySQL
 const verificarToken = require('../middleware/authMiddleware'); // Tu middleware de JWT
 
-// 🗑️ 1. RUTA PARA ELIMINAR PROPIEDAD (SOLO EL DUEÑO)
+// 🗑️ 1. RUTA PARA ELIMINAR PROPIEDAD (CON OWNER_ID REAL)
 router.delete('/:id', verificarToken, async (req, res) => {
   const propiedadId = req.params.id;
-  const usuarioId = req.user.id; // ID extraído del Token por tu middleware
+  const usuarioId = req.user.id; // ID extraído del Token JWT por tu middleware
 
   try {
-    // Clausula WHERE doble: Coincidir ID de la casa Y ID del dueño
+    // 🚀 Corregido a owner_id según la base de datos
     const [resultado] = await db.query(
-      'DELETE FROM propiedades WHERE id = ? AND id_propietario = ?',
+      'DELETE FROM propiedades WHERE id = ? AND owner_id = ?',
       [propiedadId, usuarioId]
     );
 
@@ -28,16 +28,15 @@ router.delete('/:id', verificarToken, async (req, res) => {
   }
 });
 
-// ✏️ 2. RUTA PARA EDITAR PROPIEDAD (SOLO EL DUEÑO)
+// ✏️ 2. RUTA PARA EDITAR PROPIEDAD (CON OWNER_ID REAL)
 router.put('/:id', verificarToken, async (req, res) => {
   const propiedadId = req.params.id;
   const usuarioId = req.user.id;
   const { titulo, descripcion, precio, ubicacion } = req.body;
 
   try {
-    // Condición estricta: Solo actualiza si eres el propietario real
     const [resultado] = await db.query(
-      'UPDATE propiedades SET titulo = ?, descripcion = ?, precio = ?, ubicacion = ? WHERE id = ? AND id_propietario = ?',
+      'UPDATE propiedades SET titulo = ?, descripcion = ?, precio = ?, ubicacion = ? WHERE id = ? AND owner_id = ?',
       [titulo, descripcion, precio, ubicacion, propiedadId, usuarioId]
     );
 
