@@ -8,6 +8,7 @@ import Register from '../pages/Register.jsx';
 import PropertyDetail from '../pages/PropertyDetail.jsx'; 
 import AddProperty from '../pages/AddProperty.jsx';  
 import ProtectedRoute from '../components/ProtectedRoute.jsx';
+import EditProperty from '../pages/EditProperty.jsx';
 
 function AppRouter() {
   return (
@@ -23,6 +24,7 @@ function AppRouter() {
         <Route path="/properties" element={<Properties />} />
         <Route path="/properties/:id" element={<PropertyDetail />} /> 
         <Route path="/add-property" element={<AddProperty />} />     
+        <Route path="/edit-property/:id" element={<EditProperty />} />
       </Route>
 
       {/* El comodín al final */}

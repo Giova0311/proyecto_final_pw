@@ -1,183 +1,57 @@
-import React, { useState, useEffect } from "react";
-import PropertyCard from "../components/PropertyCard";
+const express = require('express');
+const router = express.Router();
+const db = require('../config/db'); // Tu conexión a MySQL
+const verificarToken = require('../middleware/authMiddleware'); // Tu middleware de JWT
 
-function Properties() {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+// 🗑️ 1. RUTA PARA ELIMINAR PROPIEDAD (SOLO EL DUEÑO)
+router.delete('/:id', verificarToken, async (req, res) => {
+  const propiedadId = req.params.id;
+  const usuarioId = req.user.id; // ID extraído del Token por tu middleware
 
-  // Filtros
-  const [searchLocation, setSearchLocation] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [filterType, setFilterType] = useState("Todos");
-
-  // Traer los datos reales desde el Backend
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/api/properties");
-        const resData = await response.json();
-        if (response.ok) {
-          setProperties(resData);
-        } else {
-          throw new Error(resData.message || "Error al cargar catálogo");
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProperties();
-  }, []);
-
-  // Lógica de filtrado en tiempo real
-  const filteredProperties = properties.filter((item) => {
-    const matchLocation = item.location
-      .toLowerCase()
-      .includes(searchLocation.toLowerCase());
-    const matchPrice =
-      maxPrice === "" || parseFloat(item.price) <= parseFloat(maxPrice);
-    const matchType = filterType === "Todos" || item.type === filterType;
-    return matchLocation && matchPrice && matchType;
-  });
-
-  if (loading)
-    return (
-      <div style={{ textAlign: "center", padding: "40px" }}>
-        Cargando catálogo real...
-      </div>
-    );
-  if (error)
-    return (
-      <div style={{ textAlign: "center", padding: "40px", color: "red" }}>
-        Error: {error}
-      </div>
+  try {
+    // Clausula WHERE doble: Coincidir ID de la casa Y ID del dueño
+    const [resultado] = await db.query(
+      'DELETE FROM propiedades WHERE id = ? AND id_propietario = ?',
+      [propiedadId, usuarioId]
     );
 
-  return (
-    <div
-      style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        padding: "20px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h2 style={{ color: "#2c3e50", marginBottom: "20px" }}>
-        Catálogo de Propiedades Reales
-      </h2>
+    if (resultado.affectedRows === 0) {
+      return res.status(403).json({ 
+        message: "No tienes permiso para eliminar esta propiedad o el inmueble no existe." 
+      });
+    }
 
-      {/* Barra de Filtros */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "15px",
-          backgroundColor: "#f8f9fa",
-          padding: "20px",
-          borderRadius: "8px",
-          marginBottom: "30px",
-          border: "1px solid #e0e0e0",
-        }}
-      >
-        <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "5px",
-              fontWeight: "bold",
-              fontSize: "13px",
-            }}
-          >
-            Ubicación
-          </label>
-          <input
-            type="text"
-            placeholder="Ej: Centro"
-            value={searchLocation}
-            onChange={(e) => setSearchLocation(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
-        <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "5px",
-              fontWeight: "bold",
-              fontSize: "13px",
-            }}
-          >
-            Precio Máximo
-          </label>
-          <input
-            type="number"
-            placeholder="Ej: 300000000"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
-        <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "5px",
-              fontWeight: "bold",
-              fontSize: "13px",
-            }}
-          >
-            Tipo
-          </label>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-              backgroundColor: "#fff",
-            }}
-          >
-            <option value="Todos">Todos</option>
-            <option value="Venta">Venta</option>
-            <option value="Arriendo">Arriendo</option>
-          </select>
-        </div>
-      </div>
+    return res.json({ message: "Propiedad eliminada correctamente." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Error interno del servidor al eliminar." });
+  }
+});
 
-      {/* Grid de Tarjetas */}
-      {filteredProperties.length === 0 ? (
-        <p style={{ textAlign: "center", color: "#7f8c8d" }}>
-          No se encontraron inmuebles con los filtros seleccionados.
-        </p>
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "25px",
-          }}
-        >
-          {filteredProperties.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// ✏️ 2. RUTA PARA EDITAR PROPIEDAD (SOLO EL DUEÑO)
+router.put('/:id', verificarToken, async (req, res) => {
+  const propiedadId = req.params.id;
+  const usuarioId = req.user.id;
+  const { titulo, descripcion, precio, ubicacion } = req.body;
 
-export default Properties;
+  try {
+    // Condición estricta: Solo actualiza si eres el propietario real
+    const [resultado] = await db.query(
+      'UPDATE propiedades SET titulo = ?, descripcion = ?, precio = ?, ubicacion = ? WHERE id = ? AND id_propietario = ?',
+      [titulo, descripcion, precio, ubicacion, propiedadId, usuarioId]
+    );
+
+    if (resultado.affectedRows === 0) {
+      return res.status(403).json({ 
+        message: "No puedes editar esta propiedad porque no te pertenece." 
+      });
+    }
+
+    return res.json({ message: "Propiedad actualizada con éxito." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Error interno del servidor al editar." });
+  }
+});
+
+module.exports = router;
