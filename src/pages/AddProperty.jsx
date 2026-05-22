@@ -48,7 +48,7 @@ function AddProperty() {
           area: parseInt(area),
           type,
           description,
-          owner_id: user.id, // Captura dinámicamente tu ID desde la sesión activa
+          owner_id: user.id,
         }),
       });
 
