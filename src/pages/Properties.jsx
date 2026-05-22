@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const btnStyles = {
   eliminar: {
@@ -59,24 +60,48 @@ const btnStyles = {
     },
     hover: { backgroundColor: "#5d6d7e", transform: "translateY(-2px)" },
   },
+  contactar: {
+    base: {
+      width: "100%",
+      backgroundColor: "#2980b9",
+      color: "#fff",
+      padding: "10px",
+      border: "none",
+      borderRadius: "6px",
+      fontWeight: "bold",
+      cursor: "pointer",
+      marginTop: "10px",
+      transition: "transform 0.2s, background-color 0.2s",
+    },
+    hover: { backgroundColor: "#1a6fa0", transform: "translateY(-2px)" },
+  },
 };
 
 export default function Properties() {
   const [properties, setProperties] = useState([]);
   const [editando, setEditando] = useState(null);
   const [formData, setFormData] = useState({});
+  const navigate = useNavigate();
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const isOwner = user?.role === "owner";
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user"));
-    if (token && user) {
-      axios
-        .get(`http://localhost:5000/api/owner/properties/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => setProperties(res.data))
-        .catch((err) => console.error(err));
-    }
+
+    if (!token || !user) return;
+
+    // ✅ Owner ve sus propiedades, client ve todas
+    const url =
+      user.role === "owner"
+        ? `http://localhost:5000/api/owner/properties/${user.id}`
+        : `http://localhost:5000/api/properties`;
+
+    axios
+      .get(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setProperties(res.data))
+      .catch((err) => console.error(err));
   }, []);
 
   const eliminarPropiedad = (id) => {
@@ -138,7 +163,7 @@ export default function Properties() {
       <h2
         style={{ textAlign: "center", color: "#2c3e50", marginBottom: "20px" }}
       >
-        Mis Propiedades
+        {isOwner ? "Mis Propiedades" : "Propiedades Disponibles"}
       </h2>
       <div
         style={{
@@ -257,38 +282,54 @@ export default function Properties() {
                 <p>
                   <strong>Tipo:</strong> {p.type}
                 </p>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginTop: "15px",
-                  }}
-                >
+
+                {isOwner ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: "15px",
+                    }}
+                  >
+                    <button
+                      onClick={() => eliminarPropiedad(p.id)}
+                      style={btnStyles.eliminar.base}
+                      onMouseEnter={(e) =>
+                        Object.assign(e.target.style, btnStyles.eliminar.hover)
+                      }
+                      onMouseLeave={(e) =>
+                        Object.assign(e.target.style, btnStyles.eliminar.base)
+                      }
+                    >
+                      Eliminar
+                    </button>
+                    <button
+                      onClick={() => abrirEditor(p)}
+                      style={btnStyles.editar.base}
+                      onMouseEnter={(e) =>
+                        Object.assign(e.target.style, btnStyles.editar.hover)
+                      }
+                      onMouseLeave={(e) =>
+                        Object.assign(e.target.style, btnStyles.editar.base)
+                      }
+                    >
+                      Editar
+                    </button>
+                  </div>
+                ) : (
                   <button
-                    onClick={() => eliminarPropiedad(p.id)}
-                    style={btnStyles.eliminar.base}
+                    onClick={() => navigate("/contact")}
+                    style={btnStyles.contactar.base}
                     onMouseEnter={(e) =>
-                      Object.assign(e.target.style, btnStyles.eliminar.hover)
+                      Object.assign(e.target.style, btnStyles.contactar.hover)
                     }
                     onMouseLeave={(e) =>
-                      Object.assign(e.target.style, btnStyles.eliminar.base)
+                      Object.assign(e.target.style, btnStyles.contactar.base)
                     }
                   >
-                    Eliminar
+                    Contáctanos
                   </button>
-                  <button
-                    onClick={() => abrirEditor(p)}
-                    style={btnStyles.editar.base}
-                    onMouseEnter={(e) =>
-                      Object.assign(e.target.style, btnStyles.editar.hover)
-                    }
-                    onMouseLeave={(e) =>
-                      Object.assign(e.target.style, btnStyles.editar.base)
-                    }
-                  >
-                    Editar
-                  </button>
-                </div>
+                )}
               </div>
             )}
           </div>
